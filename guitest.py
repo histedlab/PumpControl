@@ -1,13 +1,19 @@
 # This Python file uses the following encoding: utf-8
-#setup and open serial port
+# setup and open serial port
 import time
 import serial
+import re
 import numpy as np
 from Tkinter import *
 import ttk
 
+#replace 'AI02FUQP' with each pump's unique identifier cu.usbserial-AI02FUQP
+port = '/usr/local/dev/cu-NE500-0'
+diameter = 7.29
+rate = 10.0
+
 ser = serial.Serial(
-    port='/dev/cu.usbserial-AI02FUQP', #replace 'AI02FUQP' with each pump's unique identifier
+    port, 
     baudrate=19200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
@@ -17,15 +23,11 @@ ser = serial.Serial(
 )
 
 ser.timeout = 2
-print(ser.isOpen()) #prints boolean response
 
 ######################################
 
-import serial
-import re
-
 class NE500():
-    def __init__(self, device_name, diameter=None, rate=None, debug=False):
+    def __init__(self, device_name, diameter, rate, debug=False):
         """Save parameters only, setup on __enter__"""
         self.device_name = device_name
         self.diameter = diameter
@@ -117,39 +119,50 @@ class NE500():
         self.send_command('VOL %d' % vol, expOutput='')
         self.send_command('RUN', expStatus='W', expOutput='')
 
-    def purge(self):
-        self.send_command('DIR INF', expOutput='')
-        self.send_command('PUR', expOutput='')
-        #self.send_command('RUN', expOutput='')
-
     def __exit__(self, type, value, traceback):
         ser.close()
 
+def refill(volume):
+    with NE500(port, diameter, rate) as pump: 
+        pump.infuse(100)
+        time.sleep(3)
+        pump.withdraw(volume)
 
 def draw_500(*args):
-    port = '/dev/cu.usbserial-AI02FUQP'
-    with NE500(port, diameter=7.29, rate=2.0) as pump:
-        pump.withdraw(500)
+    refill(500)
 
 def draw_1000(*args):
-    port = '/dev/cu.usbserial-AI02FUQP'
-    with NE500(port, diameter=7.29, rate=2.0) as pump:
-        pump.withdraw(1000)
+    refill(1000)
 
 def draw_1500(*args):
-    port = '/dev/cu.usbserial-AI02FUQP'
-    with NE500(port, diameter=7.29, rate=2.0) as pump:
-        pump.withdraw(1500)
+    refill(1500)
 
 def draw_2000(*args):
-    port = '/dev/cu.usbserial-AI02FUQP'
-    with NE500(port, diameter=7.29, rate=2.0) as pump:
-        pump.withdraw(2000)
+    refill(2000)
 
-def flush(*args):
-    port = '/dev/cu.usbserial-AI02FUQP'
-    with NE500(port, diameter=7.29, rate=2.0) as pump:
-        pump.infuse(150)
+def draw_custom(*args):
+    refill(int(customDraw.get()))
+
+def pump_custom(*args):
+    with NE500(port, diameter, rate) as pump:
+        pump.infuse(int(customInfuse.get()))
+
+def clearLine(*args):
+    with NE500(port, diameter, rate) as pump:
+        pump.infuse(200)
+
+def changeDiameter(*args):
+    diameter = float(customDiameter.get())
+    dchange = True
+    diameterLabel.set('Diameter = ' + str(diameter))
+    infoLabel.set('Diameter = ' + str(diameter) + '   |   Rate = ' + str(rate))
+
+def changeRate(*args):
+    rate = float(customRate.get())
+    rchange = True
+    rateLabel.set('Rate = ' + str(rate))
+    infoLabel.set('Diameter = ' + str(diameter) + '   |   Rate = ' + str(rate))
+
 '''
    UI SETUP   
 '''
@@ -161,16 +174,44 @@ mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
 mainframe.columnconfigure(0, weight=1)
 mainframe.rowconfigure(0, weight=1)
 
-ttk.Button(mainframe, text="Draw 500", command=draw_500).grid(column=1, row=1, sticky=W)
-ttk.Button(mainframe, text="Draw 1000", command=draw_1000).grid(column=2, row=1, sticky=W)
-ttk.Button(mainframe, text="Draw 1500", command=draw_1500).grid(column=3, row=1, sticky=W)
-ttk.Button(mainframe, text="Draw 2000", command=draw_2000).grid(column=4, row=1, sticky=W)
-ttk.Button(mainframe, text="Flush", command=flush).grid(column=1, row=2, sticky=W)
+ttk.Button(mainframe, width=10, text="Draw 500", command=draw_500).grid(column=1, row=1)
+ttk.Button(mainframe, width=10, text="Draw 1000", command=draw_1000).grid(column=2, row=1)
+ttk.Button(mainframe, width=10, text="Draw 1500", command=draw_1500).grid(column=1, row=2)
+ttk.Button(mainframe, width=10, text="Draw 2000", command=draw_2000).grid(column=2, row=2)
+ttk.Button(mainframe, width=25, text="Clear Line", command=clearLine).grid(column=1, row=3, columnspan=2)
+
+ttk.Label(mainframe, text='').grid(column=1, row=4)
+ttk.Label(mainframe, text='').grid(column=1, row=8)
+
+customDraw = StringVar()
+ttk.Label(mainframe, text='Withdraw/Pump Custom Volume').grid(column=1, row=5, columnspan=2)
+ttk.Entry(mainframe, width=10, textvariable=customDraw).grid(column=1, row=6)
+ttk.Button(mainframe, width=10, text="Draw", command=draw_custom).grid(column=2, row=6)
+
+customInfuse = StringVar()
+ttk.Entry(mainframe, width=10, textvariable=customInfuse).grid(column=1, row=7)
+ttk.Button(mainframe, width=10, text="Pump", command=pump_custom).grid(column=2, row=7)
+
+infoLabel = StringVar()
+infoLabel.set('Diameter = ' + str(diameter) + '   |   Rate = ' + str(rate))
+ttk.Label(mainframe, textvariable=infoLabel).grid(column=1, row=9, columnspan=2)
+
+diameterLabel = StringVar()
+diameterLabel.set('Diameter = ' + str(diameter))
+customDiameter = StringVar()
+#ttk.Entry(mainframe, width=10, textvariable=customDiameter).grid(column=1, row=10)
+#ttk.Button(mainframe, width=10, text="Set Diameter", command=changeDiameter).grid(column=2, row=10)
+
+rateLabel = StringVar()
+rateLabel.set('Rate = ' + str(rate))
+customRate = StringVar()
+#ttk.Entry(mainframe, width=10, textvariable=customRate).grid(column=1, row=11)
+#ttk.Button(mainframe, width=10, text="Set Rate", command=changeRate).grid(column=2, row=11)
 
 for child in mainframe.winfo_children(): 
     child.grid_configure(padx=5, pady=5)
 
-root.bind('<Return>', flush)
+#root.bind('<Return>', clearLine)
 root.mainloop()
 
 #####################################################################
