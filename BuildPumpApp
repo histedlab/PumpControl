@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#source /opt/anaconda2/bin/activate root
+source activate py27
+sudo pip install pyinstaller
+cd desktop
+git clone https://github.com/histedlab/PumpControl.git
+
+#compile .app from PumpRefill.py (onefile -> bundle as .app, windowed -> do not open console window for i/o)
+pyinstaller --onefile --windowed ~/Desktop/PumpControl/PumpRefill.py
+
+mv ~/desktop/dist/*.app ~/desktop
+rm -R ~/desktop/build ~/desktop/dist ~/desktop/PumpControl ~/desktop/guitest.spec
