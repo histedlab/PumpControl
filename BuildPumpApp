@@ -1,18 +1,37 @@
 #!/bin/bash
 
-#source /opt/anaconda2/bin/activate root
-#source activate py27
+#activate the anaconda root directory (as set up on holdanddetect)
+source /opt/anaconda2/bin/activate root
 
-#install pyinstaller (does not reinstall if already installed) – sudo required on holdanddetect account
-sudo pip install pyinstaller
+#create and activate new conda environment
+#  - uses Python 2.7.13
+#  - installs Tkinter (tk) and pyserial 
+#     - (the only PumpRefill.py dependencies not available in the env by default)
+conda create --name BuildPumpApp python=2.7 tk pyserial -y
+source activate BuildPumpApp
+
+#install pyinstaller 
+#  - does not reinstall if it’s already installed
+pip install pyinstaller
 
 #clone the histedlab/PumpControl repository to the desktop
 cd desktop
 git clone https://github.com/histedlab/PumpControl.git
 
-#compile .app from PumpRefill.py (onefile -> bundle as .app, windowed -> do not open console window for i/o)
+#compile .app from PumpRefill.py
+#  - ‘onefile’ instructs pyinstaller to bundle as a .app package 
+#  - ‘windowed’ sets it not to open a console window alongside PumpRefill.app on launch
 pyinstaller --onefile --windowed ~/Desktop/PumpControl/PumpRefill.py
 
-#move the resulting .app from the folder created by pyinstaller to the desktop, then remove pyinstaller clutter
+#move the resulting .app from the folder created by pyinstaller to the desktop
 mv ~/desktop/dist/*.app ~/desktop
-rm -R ~/desktop/build ~/desktop/dist ~/desktop/PumpControl ~/desktop/guitest.spec
+
+#then remove folders/files created by pyinstaller during the build
+rm -fR ~/desktop/PumpControl 
+rm -fR ~/desktop/build ~/desktop/dist 
+rm -f ~/desktop/PumpRefill.spec
+
+source deactivate
+source /opt/anaconda2/bin/activate root
+conda remove --name BuildPumpApp --all -y
+source deactivate
