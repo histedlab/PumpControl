@@ -16,7 +16,8 @@ import serial
 port = '/usr/local/dev/cu-NE500-0'
 #use 7.27 for new syringes, 7.29 for old
 syringe_diameter = 7.27
-pump_rate = 1.0
+#rate of 2.0 > 33.3uL/sec, 1.5/3.0 > 25uL/sec 1.0/4.0 > 16.7uL/sec, 0.5, 2.5 > 8.3uL/sec
+pump_rate = 2.0
 
 # setup and open serial port
 ser = serial.Serial(
@@ -139,7 +140,7 @@ def refill(volume):
     with NE500(port, syringe_diameter, pump_rate) as pump:
         pump.infuse(100)
         time.sleep(4)
-        pump.withdraw(0.5*volume)
+        pump.withdraw(volume)
 
 def draw_500():
     """calls refill() to push 100 and pull 500"""
@@ -160,12 +161,14 @@ def draw_2000():
 def draw_custom():
     """calls refill() to push 100 and pull custom value from UI"""
     with NE500(port, syringe_diameter, pump_rate) as pump:
-    	pump.withdraw(0.5*int(customDraw.get())
+    	volume = int(customDraw.get())
+    	pump.withdraw(volume)
 
 def pump_custom():
     """pushes custom value from UI"""
     with NE500(port, syringe_diameter, pump_rate) as pump:
-        pump.infuse(int(0.5*customInfuse.get()))
+    	volume = int(customInfuse.get())
+        pump.infuse(volume)
 
 def clearLine():
     """pushes 200 uL"""
