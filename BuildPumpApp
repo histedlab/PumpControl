@@ -16,6 +16,7 @@ pip install pyinstaller
 
 #clone the histedlab/PumpControl repository to the desktop
 cd desktop
+rm -fR ~/desktop/PumpRefill.app
 git clone https://github.com/histedlab/PumpControl.git
 
 #compile .app from PumpRefill.py
