@@ -2,3 +2,7 @@
 *.pyc
 *~
 old
+PumpYouUp.spec
+build
+dist
+
