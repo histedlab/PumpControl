@@ -1,0 +1,9 @@
+# PumpControl - PumpYouUp.app
+
+
+## Installation
+pyinstaller_build.sh - will build and copy into /Applications
+tmux-cssh-all
+sudo scp -rp holdanddetect@histedrigtest.local:/Applications/PumpYouUp.app /Applications  # first password prompt: sudo; second: ssh
+
+    

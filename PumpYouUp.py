@@ -57,16 +57,25 @@ def run_ui():
         ttk.Separator(mainframe,orient=tk.HORIZONTAL).grid(row=5, column=1, columnspan=2,sticky='ew', ipady='20')
 
         ttk.Label(mainframe, text='Pump 200µL to clear the line.').grid(column=1, row=6, columnspan=2)
-        clear_line_button = ttk.Button(mainframe, width=25, text="Clear Line",
+        clear_line_button = ttk.Button(mainframe, width=10, text="Clear",
                                        command=lambda: pump.infuse(200))
-        clear_line_button.grid(column=1, row=7, columnspan=2)
+        clear_line_button.grid(column=1, row=7, columnspan=1)
 
+        def cbClearAndQuit():
+            pump.infuse(200)
+            root.destroy()
+            #sys.exit(0)  # destroy will exit
+        clear_line2_button = ttk.Button(mainframe, width=11, text="Clear then quit",
+                                        command=cbClearAndQuit)
+        clear_line2_button.grid(column=2, row=7, columnspan=1)
+
+        
         ttk.Separator(mainframe,orient=tk.HORIZONTAL).grid(row=8, column=1, columnspan=2,sticky='ew', ipady='20')
 
         ttk.Label(mainframe, text='Withdraw/Pump custom µL').grid(column=1, row=9, columnspan=2)
 
         customWithdraw = tk.StringVar()
-        customWithdraw.set(200)
+        customWithdraw.set(100)
         ttk.Entry(mainframe, width=10, textvariable=customWithdraw,
                   justify=tk.CENTER).grid(column=1, row=10)
         def cbWithdraw():
@@ -75,7 +84,7 @@ def run_ui():
 
         
         customPump = tk.StringVar()
-        customPump.set(200)
+        customPump.set(100)
         ttk.Entry(mainframe, width=10, textvariable=customPump,
                   justify=tk.CENTER).grid(column=1, row=11)
         def cbPump():
