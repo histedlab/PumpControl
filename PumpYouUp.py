@@ -9,11 +9,12 @@ import ne500_behavpump as ne500
 try:
     import Tkinter as tk
     import ttk
-except ImportError:
+    import tkMessageBox as messagebox
+except ImportError:  # for Py3
     import tkinter as tk
     from tkinter import ttk
+    from tkinter import messagebox
 import re
-
 
 device = '/usr/local/dev/cu-NE500-0'
 
@@ -27,6 +28,41 @@ def refill(pump, amtUl=None):
     pump.withdraw(amtUl)
 
 class ourNe500(ne500.NE500):
+    """Extend original NE500 class.  Adds tracking total vol; adds refill() method"""
+    totalVol = None
+    volThresh = 2000  # in uL
+
+    def __init__(self, device_name, diameter,  rate, debug=False):
+        self.totalVol = 0
+        super(ourNE500, self).__init__(device_name, diameter, rate, debug)
+
+    def infuse(self, vol, block=True):
+        self.totalVol += vol
+        if self.totalVol >= volThresh:
+            res = messagebox.askokcancel("PumpYouUp",
+                                         "Total volume infused this session will exceed %dµL.  OK to continue?"%self.volThresh,
+                                         icon='warning')
+            if res:
+                pass # continue
+            else:
+                self.totalVol -= vol  # reset volume to before this call
+                return  # skip calling super method
+        super(ourNE500, self).infuse(vol, block)
+
+
+    def withdraw(self, vol, block=True):
+        self.totalVol -= vol
+        if self.totalVol <= -volThresh:
+            res = messagebox.askokcancel("PumpYouUp",
+                                         "Total volume withdrawn this session will exceed %dµL.  OK to continue?"% self.volThresh,
+                                         icon='warning')
+            if res:
+                pass # continue
+            else:
+                self.totalVol -= vol  # reset volume to before this call
+                return  # skip calling super method
+        super(ourNE500, self).withdraw(vol, block)
+
     def refill(self, amtUl=None):
         """Blocking"""
         self.infuse(100)

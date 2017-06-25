@@ -6,7 +6,7 @@ import serial
 import time
 import re
 
-class NE500():
+class NE500(object):
     """Interface with a New Era Pump Systems NE-500 using this class."""
 
     def __init__(self, device_name, diameter, rate, debug=False):
