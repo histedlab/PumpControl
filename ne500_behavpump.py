@@ -70,7 +70,7 @@ class NE500():
         
         m0 = re.match(r'\x02([0-9][0-9])(.)(.*)\x03', out)
         if m0 is None:
-            raise RuntimeError, 'unknown response: %s' % out
+            raise RuntimeError('unknown response: %s' % out)
         num,status,response = m0.groups()
         
         if expStatus is not None and status is not expStatus:
