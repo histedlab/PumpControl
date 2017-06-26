@@ -28,40 +28,51 @@ def refill(pump, amtUl=None):
     pump.withdraw(amtUl)
 
 class ourNe500(ne500.NE500):
-    """Extend original NE500 class.  Adds tracking total vol; adds refill() method"""
-    totalVol = None
-    volThresh = 2000  # in uL
+    """Extend original NE500 class.  Adds tracking total vol; adds refill() method
 
-    def __init__(self, device_name, diameter,  rate, debug=False):
+    totalVolCallback gets called as totalVolCallback(self.totalVol) after infuse() and withdraw()
+
+    If we have had two or more actions and volThreshold is exceeded, ask for confirmation"""
+    totalVol = None
+    volThresh = 1500  # in uL
+    _nActions = None
+
+    def __init__(self, device_name, diameter,  rate, debug=False, totalVolCallback=None):
         self.totalVol = 0
-        super(ourNE500, self).__init__(device_name, diameter, rate, debug)
+        self._totalVolCallback = totalVolCallback    # function handle
+        self._nActions = 0
+        super(ourNe500, self).__init__(device_name, diameter, rate, debug)
 
     def infuse(self, vol, block=True):
         self.totalVol += vol
-        if self.totalVol >= volThresh:
+        if self._nActions > 0 and self.totalVol > self.volThresh:
             res = messagebox.askokcancel("PumpYouUp",
-                                         "Total volume infused this session will exceed %dµL.  OK to continue?"%self.volThresh,
+                                         "Not first action, and total vol will exceed %dµL.  OK to continue?"%self.volThresh,
                                          icon='warning')
             if res:
                 pass # continue
             else:
                 self.totalVol -= vol  # reset volume to before this call
                 return  # skip calling super method
-        super(ourNE500, self).infuse(vol, block)
+        super(ourNe500, self).infuse(vol, block)
+        self._totalVolCallback(self.totalVol)
+        self._nActions += 1
 
 
     def withdraw(self, vol, block=True):
         self.totalVol -= vol
-        if self.totalVol <= -volThresh:
+        if self._nActions > 0 and self.totalVol < (-self.volThresh):
             res = messagebox.askokcancel("PumpYouUp",
-                                         "Total volume withdrawn this session will exceed %dµL.  OK to continue?"% self.volThresh,
+                                         "Not first action, and total vol will exceed %dµL.  OK to continue?"% -self.volThresh,
                                          icon='warning')
             if res:
                 pass # continue
             else:
-                self.totalVol -= vol  # reset volume to before this call
+                self.totalVol += vol  # reset volume to before this call
                 return  # skip calling super method
-        super(ourNE500, self).withdraw(vol, block)
+        super(ourNe500, self).withdraw(vol, block)
+        self._totalVolCallback(self.totalVol)
+        self._nActions += 1
 
     def refill(self, amtUl=None):
         """Blocking"""
@@ -72,13 +83,22 @@ class ourNe500(ne500.NE500):
         
 def run_ui():
 
-    with ourNe500(device, diameter=syringe_diameter, rate=pump_rate) as pump:
-        root = tk.Tk()
-        root.title("Refill Pump")
-        mainframe = ttk.Frame(root, padding="20 20 20 20")
-        mainframe.grid(column=0, row=0)
-        mainframe.columnconfigure(0, weight=1)
-        mainframe.rowconfigure(0, weight=1)
+    # setup window
+    root = tk.Tk()
+    root.title("Refill Pump")
+    mainframe = ttk.Frame(root, padding="20 20 20 20")
+    mainframe.grid(column=0, row=0)
+    mainframe.columnconfigure(0, weight=1)
+    mainframe.rowconfigure(0, weight=1)
+
+    # variable and callback to update total vol label after each call of infuse/withdraw
+    volLabel = tk.StringVar()
+    def cbUpdateVolLabel(totalVol):  # closure, closed over volLabel
+        volLabel.set('Total volume since start: %5d µL\n(+ pumped, - withdrawn)' % totalVol)
+    
+    # build UI with pump around
+    with ourNe500(device, diameter=syringe_diameter,
+                  rate=pump_rate, totalVolCallback=cbUpdateVolLabel) as pump:
 
         ttk.Label(mainframe, text='Pump 100µL to clear bubbles,\nthen refill indicated µL').grid(column=1, row=1, columnspan=2)
         ttk.Button(mainframe, width=10, text="Refill 500µL",
@@ -133,6 +153,9 @@ def run_ui():
         infoLabel.set('Diameter = ' + str(syringe_diameter) + '   |   Rate = 33µL/sec')
         ttk.Label(mainframe, textvariable=infoLabel).grid(column=1, row=13, columnspan=2)
 
+        cbUpdateVolLabel(0) # on startup, set to zero
+        ttk.Label(mainframe, textvariable=volLabel, justify=tk.LEFT).grid(column=1, row=14, columnspan=2)
+        
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
