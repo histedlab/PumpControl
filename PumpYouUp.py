@@ -77,6 +77,7 @@ class ourNe500(ne500.NE500):
     def refill(self, amtUl=None):
         """Blocking"""
         self.infuse(100)
+        self._nActions -= 1  # refill() should count as only one action, not two; revert count from the first infuse
         self.withdraw(amtUl)
 
 ######################################
