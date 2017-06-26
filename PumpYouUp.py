@@ -159,6 +159,11 @@ def run_ui():
         for child in mainframe.winfo_children():
             child.grid_configure(padx=5, pady=5)
 
+        # make sure window comes to top
+        root.lift()
+        root.attributes('-topmost',True)
+        root.after_idle(root.attributes,'-topmost',False)
+        
         root.mainloop()
 
 
