@@ -5,4 +5,6 @@ old
 PumpYouUp.spec
 build
 dist
+.ipynb_checkpoints
+
 
