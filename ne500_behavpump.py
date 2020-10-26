@@ -1,7 +1,7 @@
 # ne500_behavpump:  control class for an ne500, customized for our behavior needs.
 #
 # created: histed 170615
-
+#from __future__ import unicode_literals # use Py3 unicode string format when rnning on Py2
 import serial
 import time
 import re
@@ -14,8 +14,8 @@ class NE500(object):
         self.device_name = device_name
         self.diameter = diameter
         self.rate = rate
-        self.rateUnits = 'MM'  # hardcoded for now
-        self.volUnits = 'UL'
+        self.rateUnits = b'MM'  # hardcoded for now
+        self.volUnits = b'UL'
         self.debug = debug
 
     def __enter__(self):
@@ -33,13 +33,13 @@ class NE500(object):
         assert self.ser.isOpen() == True       #make sure connection was initiated successfully
 
         # basic setup for both infuse and withdraw
-        self.send_command('DIA %4.2f' % self.diameter, expOutput='')
-        self.send_command('RAT %4.2f %s' % (self.rate, self.rateUnits), expOutput='')
-        self.send_command('VOL %s' % self.volUnits, expOutput='')
+        self.send_command(b'DIA %4.2f' % self.diameter, expOutput=b'')
+        self.send_command(b'RAT %4.2f %s' % (self.rate, self.rateUnits), expOutput=b'')
+        self.send_command(b'VOL %s' % self.volUnits, expOutput=b'')
 
         return self
 
-    def send_command(self, command, expStatus='S', expOutput=None):
+    def send_command(self, command, expStatus=b'S', expOutput=None):
         """Sends a command to the pump, parses status output, returns response string.
         
         expOutput: if None, return response output.  If not None, raise if output != expOutput
@@ -53,9 +53,10 @@ class NE500(object):
 
 
         """
-        
-        assert(command[-1] != '\n' and command[-1] != '\r'), 'Do not use line endings on command'
-        self.ser.write(command+'\r\n')
+        if type(command) is not bytes:
+            raise RuntimeError('input must be bytes, not unicode')
+        assert(command[-1] != b'\n' and command[-1] != b'\r'), 'Do not use line endings on command'
+        self.ser.write(command+b'\r\n')
         if self.debug: print('out: %s' % command)
         
         while(self.ser.inWaiting() == 0):
@@ -68,12 +69,12 @@ class NE500(object):
         time.sleep(0.005)
         assert(self.ser.inWaiting() == 0), 'characters returned after read? : last %s' % out
         
-        m0 = re.match(r'\x02([0-9][0-9])(.)(.*)\x03', out)
+        m0 = re.match(rb'\x02([0-9][0-9])(.)(.*)\x03', out)
         if m0 is None:
             raise RuntimeError('unknown response: %s' % out)
         num,status,response = m0.groups()
         
-        if expStatus is not None and status is not expStatus:
+        if expStatus is not None and status != expStatus:
             raise RuntimeError('Unknown status from pump (not %s, is: %s)' % (expStatus, status))
         if expOutput is not None:
             if response != expOutput:
@@ -89,7 +90,7 @@ class NE500(object):
 
     def get_dispensed(self):
         """command: get dispensed volume.  Returns: (infuseVol,withdrawVol,units)"""
-        outS = self.send_command('DIS')
+        outS = self.send_command(b'DIS')
         #print(outS)
         m0 = re.search(r'I([0-9\.]*)W([0-9\.]*)(.L)', outS)
         infuseVol, withdrawVol, units = m0.groups()
@@ -102,23 +103,23 @@ class NE500(object):
         block: boolean, whether to wait for pump to finish
         dir: 'infuse' or 'withdraw'  """
         if dir == 'infuse':
-            dir_cmd = 'INF'
-            status_char = 'I'
+            dir_cmd = b'INF'
+            status_char = b'I'
         elif dir == 'withdraw':
-            dir_cmd = 'WDR'
-            status_char = 'W'
+            dir_cmd = b'WDR'
+            status_char = b'W'
         else:
             raise RuntimeError('Invalid direction')
         
-        self.send_command('DIR %s' % dir_cmd, expOutput='')
-        self.send_command('VOL %d' % vol, expOutput='')
-        self.send_command('RUN', expStatus=status_char, expOutput='')
+        self.send_command(b'DIR %s' % dir_cmd, expOutput=b'')
+        self.send_command(b'VOL %d' % vol, expOutput=b'')
+        self.send_command(b'RUN', expStatus=status_char, expOutput=b'')
         if block:
             self.wait_for_stop()
 
 
     def wait_for_stop(self):
-        while self.check_status() != 'S':
+        while self.check_status() != b'S':
             time.sleep(0.01)  # 10 ms increments
         
 
@@ -134,7 +135,7 @@ class NE500(object):
 
     def check_status(self):
         """Return the status character from querying pump status"""
-        resp,status,num = self.send_command(' ', expStatus=None)
+        resp,status,num = self.send_command(b' ', expStatus=None)
         return(status)
         
 
