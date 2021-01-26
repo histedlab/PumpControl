@@ -6,5 +6,7 @@ PumpYouUp.spec
 build
 dist
 .ipynb_checkpoints
+env-PumpYouUp38
+
 
 
